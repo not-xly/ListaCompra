@@ -1,5 +1,5 @@
 :root {
-  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-top: env(safe-area-inset-top, 0px); /* 0 con la barra de estado clásica: iOS ya deja el contenido debajo */
   --primary: #2e7d4f;
   --bg: #f4f6f1;
   --card: #fff;
@@ -297,7 +297,3 @@ dialog input[type="text"], dialog select {
 .dialog-actions .primary { background: var(--primary); border-color: var(--primary); color: #fff; }
 .dialog-actions .danger { color: #b3261e; }
 
-/* App instalada en el iPhone: la barra de estado tapa el borde superior, así que la cabecera empieza más abajo */
-@media (display-mode: standalone) {
-  :root { --safe-top: max(env(safe-area-inset-top, 0px), 59px); }
-}
