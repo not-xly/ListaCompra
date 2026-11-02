@@ -88,6 +88,7 @@ button, select, input { font: inherit; }
 }
 .group.open .group-title { color: var(--primary); }
 .group-count { font-weight: 500; color: var(--muted); font-size: 13px; }
+.group.open .group-count::after { content: "  ▲"; }
 
 .edit-hint {
   margin: 0;

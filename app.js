@@ -64,6 +64,7 @@ function save() {
 function render() {
   groupsEl.replaceChildren();
   for (const cat of state.cats) {
+    if (openCatId && cat.id !== openCatId) continue; // con un grupo abierto, sólo se ve ese
     const items = itemsOf(cat.id);
     const open = cat.id === openCatId;
     const section = el("section", "group" + (open ? " open" : ""));
@@ -74,7 +75,9 @@ function render() {
     head.addEventListener("click", () => {
       openCatId = open ? null : cat.id;
       render();
-      if (openCatId) groupsEl.querySelector(".group.open").scrollIntoView({ block: "start" });
+      // Al abrir, el grupo queda arriba; al cerrar, la lista vuelve a verse centrada en ese grupo.
+      const target = openCatId ? groupsEl.querySelector(".group.open") : groupsEl.querySelector(`.group-title[data-cat="${cat.id}"]`);
+      target.scrollIntoView({ block: "start" });
     });
     section.append(head);
     if (open) {
