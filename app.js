@@ -61,8 +61,19 @@ function save() {
 
 // Pantalla principal: grupos en acordeón
 
+let query = ""; // texto del buscador: vacío = lista por grupos
+
 function render() {
   groupsEl.replaceChildren();
+  if (query) renderSearch();
+  else renderGroups();
+  groupsEl.classList.toggle("editing", editing);
+  document.getElementById("editBtn").classList.toggle("on", editing);
+  document.getElementById("editHint").hidden = !editing;
+  updateCounts();
+}
+
+function renderGroups() {
   for (const cat of state.cats) {
     if (openCatId && cat.id !== openCatId) continue; // con un grupo abierto, sólo se ve ese
     const items = itemsOf(cat.id);
@@ -88,10 +99,22 @@ function render() {
     }
     groupsEl.append(section);
   }
-  groupsEl.classList.toggle("editing", editing);
-  document.getElementById("editHint").hidden = !editing;
-  document.getElementById("editBtn").classList.toggle("on", editing);
-  updateCounts();
+}
+
+// Buscador: lista plana de todos los grupos, sin distinguir mayúsculas ni acentos
+const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+function renderSearch() {
+  const q = normalize(query);
+  const found = state.items.filter((i) => normalize(i.name).includes(q)).sort(byName);
+  if (!found.length) {
+    groupsEl.append(el("p", "search-empty", "Ningún artículo coincide con «" + query + "»."));
+    return;
+  }
+  const grid = el("div", "items");
+  grid.style.gridTemplateRows = "repeat(" + Math.ceil(found.length / 2) + ", auto)";
+  for (const item of found) grid.append(itemButton(item));
+  groupsEl.append(grid);
 }
 
 function updateCounts() {
@@ -193,6 +216,11 @@ document.getElementById("fDelete").addEventListener("click", () => {
 });
 
 // Cabecera
+
+document.getElementById("search").addEventListener("input", (event) => {
+  query = event.target.value.trim();
+  render();
+});
 
 document.getElementById("addBtn").addEventListener("click", () => {
   if (readOnly) return alert("No se pueden añadir artículos hasta que se recupere la lista (menú Datos).");
