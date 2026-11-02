@@ -101,20 +101,28 @@ function renderGroups() {
   }
 }
 
-// Buscador: lista plana de todos los grupos, sin distinguir mayúsculas ni acentos
+// Buscador: se mantienen los grupos y sólo se ven los artículos que coinciden (sin distinguir mayúsculas ni acentos)
 const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 function renderSearch() {
   const q = normalize(query);
-  const found = state.items.filter((i) => normalize(i.name).includes(q)).sort(byName);
-  if (!found.length) {
-    groupsEl.append(el("p", "search-empty", "Ningún artículo coincide con «" + query + "»."));
-    return;
+  let found = 0;
+  for (const cat of state.cats) {
+    const matches = itemsOf(cat.id).filter((i) => normalize(i.name).includes(q));
+    if (!matches.length) continue;
+    found += matches.length;
+    const section = el("section", "group");
+    const head = el("div", "group-title");
+    head.dataset.cat = cat.id;
+    head.append(el("span", "", cat.name), el("span", "group-count"));
+    section.append(head);
+    const grid = el("div", "items");
+    grid.style.gridTemplateRows = "repeat(" + Math.ceil(matches.length / 2) + ", auto)";
+    for (const item of matches) grid.append(itemButton(item));
+    section.append(grid);
+    groupsEl.append(section);
   }
-  const grid = el("div", "items");
-  grid.style.gridTemplateRows = "repeat(" + Math.ceil(found.length / 2) + ", auto)";
-  for (const item of found) grid.append(itemButton(item));
-  groupsEl.append(grid);
+  if (!found) groupsEl.append(el("p", "search-empty", "Ningún artículo coincide con «" + query + "»."));
 }
 
 function updateCounts() {
