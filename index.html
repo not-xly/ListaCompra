@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Compra">
+  <meta name="theme-color" content="#2e7d4f">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Lista de la compra</title>
+</head>
+<body>
+  <header class="top">
+    <h1>Compra</h1>
+    <div class="actions">
+      <button id="editBtn" type="button" aria-label="Modo edición">Editar</button>
+      <button id="addBtn" type="button" aria-label="Añadir artículo">+</button>
+      <button id="datosBtn" type="button" aria-label="Exportar o importar">Datos</button>
+    </div>
+  </header>
+
+  <p id="editHint" class="edit-hint" hidden>Modo edición: toca un artículo para cambiarlo. Pulsa Editar para salir.</p>
+
+  <main id="groups" class="groups"></main>
+
+  <footer class="bottombar">
+    <button id="viewBtn" type="button" class="primary">Editar seleccionados (0)</button>
+    <button id="resetBtn" type="button">Resetear</button>
+  </footer>
+
+  <dialog id="compra" class="full">
+    <header class="top">
+      <h1>Lista de la compra <span id="compraCount" class="count"></span></h1>
+      <div class="actions">
+        <button id="compraClose" type="button">Cerrar</button>
+      </div>
+    </header>
+    <div id="compraList" class="compra-list"></div>
+    <p class="hint">Toca un artículo para marcarlo como comprado. La × lo quita de la lista.</p>
+  </dialog>
+
+  <dialog id="datos">
+    <h2>Datos</h2>
+    <div class="dialog-stack">
+      <button id="exportBtn" type="button">Exportar copia (JSON)</button>
+      <label class="btn">Importar copia (JSON)
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </label>
+    </div>
+    <div class="dialog-actions">
+      <span class="spacer"></span>
+      <button id="datosClose" type="button">Cerrar</button>
+    </div>
+  </dialog>
+
+  <dialog id="ficha">
+    <form id="fichaForm">
+      <h2 id="fichaTitle">Nuevo artículo</h2>
+
+      <label>Nombre
+        <input id="fName" type="text" required autocomplete="off" autocapitalize="sentences">
+      </label>
+
+      <label>Grupo
+        <select id="fCat"></select>
+      </label>
+
+      <label id="newCatField" hidden>Nombre del grupo nuevo
+        <input id="fNewCat" type="text" autocomplete="off" autocapitalize="sentences">
+      </label>
+
+
+      <div class="dialog-actions">
+        <button id="fDelete" type="button" class="danger">Borrar</button>
+        <span class="spacer"></span>
+        <button id="fCancel" type="button">Cancelar</button>
+        <button type="submit" class="primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
