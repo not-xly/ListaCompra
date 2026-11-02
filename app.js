@@ -79,8 +79,8 @@ function render() {
     section.append(head);
     if (open) {
       const grid = el("div", "items");
+      grid.style.gridTemplateRows = "repeat(" + Math.ceil(items.length / 2) + ", auto)";
       for (const item of items) grid.append(itemButton(item));
-      grid.append(addHereButton(cat.id));
       section.append(grid);
     }
     groupsEl.append(section);
@@ -108,13 +108,6 @@ function itemButton(item) {
     if (editing) return openFicha(item);
     setSelected(item, !item.sel, btn); // un toque selecciona o quita
   });
-  return btn;
-}
-
-function addHereButton(catId) {
-  const btn = el("button", "add-here", "+ Añadir en este grupo");
-  btn.type = "button";
-  btn.addEventListener("click", () => openFicha(null, catId));
   return btn;
 }
 
@@ -220,16 +213,12 @@ function openCompra() {
 
 function renderCompra() {
   compraList.replaceChildren();
-  const selected = state.items.filter((i) => i.sel);
+  const selected = state.items.filter((i) => i.sel).sort(byName);
   if (!selected.length) {
-    compraList.append(el("p", "empty", "Todavía no hay artículos seleccionados. Mantén pulsado un artículo dentro de su grupo para seleccionarlo."));
+    compraList.append(el("p", "empty", "Todavía no hay artículos seleccionados. Toca un artículo dentro de su grupo para seleccionarlo."));
   }
-  for (const cat of state.cats) {
-    const items = selected.filter((i) => i.cat === cat.id).sort(byName);
-    if (!items.length) continue;
-    compraList.append(el("h3", "compra-group", cat.name));
-    for (const item of items) compraList.append(compraRow(item));
-  }
+  compraList.style.gridTemplateRows = selected.length ? "repeat(" + Math.ceil(selected.length / 2) + ", auto)" : "";
+  for (const item of selected) compraList.append(compraRow(item));
   const pending = selected.filter((i) => !i.bought).length;
   document.getElementById("compraCount").textContent = selected.length ? pending + " por comprar" : "";
 }

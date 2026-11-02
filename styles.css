@@ -40,7 +40,7 @@ button, select, input { font: inherit; }
   background: var(--primary);
   color: #fff;
 }
-.top h1 { margin: 0; font-size: 18px; font-weight: 700; white-space: nowrap; }
+.top h1 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 18px; font-weight: 700; white-space: nowrap; }
 .actions { display: flex; gap: 4px; }
 .top button {
   padding: 5px 9px;
@@ -98,20 +98,10 @@ button, select, input { font: inherit; }
   border-bottom: 1px solid var(--line);
 }
 
-.add-here {
-  grid-column: 1 / -1;
-  min-height: 36px;
-  border: 1px dashed #9aa398;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--primary);
-  font-size: 15px;
-  font-weight: 600;
-}
-
 .items {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-auto-flow: column;
   gap: 4px 5px;
   padding: 6px;
   background: var(--bg);
@@ -143,7 +133,7 @@ button, select, input { font: inherit; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.item.sel { background: var(--primary); box-shadow: none; color: #fff; }
+.item.sel { background: #c0392b; box-shadow: none; color: #fff; }
 .editing .item { box-shadow: inset 0 0 0 1.5px var(--accent); }
 
 /* Barra inferior */
@@ -156,6 +146,10 @@ button, select, input { font: inherit; }
 }
 .bottombar button {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: 10px 4px;
   border: 1px solid #c9d1c5;
   border-radius: 8px;
@@ -165,7 +159,7 @@ button, select, input { font: inherit; }
 }
 .bottombar button.primary { flex: 2; background: var(--primary); border-color: var(--primary); color: #fff; }
 
-/* Pantalla de la compra: a pantalla completa */
+/* Pantalla de la compra: a pantalla completa, lista compacta en columnas */
 dialog.full {
   width: 100vw;
   max-width: 100vw;
@@ -179,68 +173,74 @@ dialog.full {
 dialog.full[open] { display: flex; flex-direction: column; }
 dialog.full .top button { padding: 6px 12px; }
 
-.compra-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.compra-group {
-  margin: 0;
-  padding: 6px 12px;
+.compra-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-auto-flow: column;
+  align-content: start;
+  gap: 3px 5px;
+  padding: 6px;
   background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .03em;
 }
+.compra-list .empty { grid-column: 1 / -1; margin: 24px 10px; color: var(--muted); }
+
 .compra-row {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--line);
+  min-width: 0;
+  min-height: 34px;
+  border-radius: 7px;
   background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
+.compra-row.bought { background: #eef3ec; }
 .compra-main {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   min-width: 0;
-  padding: 12px;
+  padding: 4px 4px 4px 8px;
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 17px;
+  font-size: 15px;
   text-align: left;
 }
-.compra-main .name { flex: 1; min-width: 0; }
+.compra-main .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compra-main .box {
   position: relative;
-  flex: 0 0 22px;
-  width: 22px;
-  height: 22px;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
   border: 1.5px solid #9aa398;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 .compra-row.bought .box { background: var(--primary); border-color: var(--primary); }
 .compra-row.bought .box::after {
   content: "";
   position: absolute;
-  left: 7px;
-  top: 2px;
-  width: 5px;
-  height: 11px;
+  left: 4px;
+  top: 0;
+  width: 4px;
+  height: 9px;
   border: solid #fff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 .compra-row.bought .name { color: var(--muted); text-decoration: line-through; }
 .compra-quit {
-  flex: 0 0 48px;
-  height: 48px;
+  flex: 0 0 28px;
+  height: 34px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #b3261e;
-  font-size: 24px;
+  font-size: 18px;
 }
-.compra-list .empty { margin: 24px 16px; color: var(--muted); }
 .hint {
   margin: 0;
   padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
