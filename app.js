@@ -256,11 +256,19 @@ function compraRow(item) {
 document.getElementById("viewBtn").addEventListener("click", openCompra);
 document.getElementById("compraClose").addEventListener("click", () => compraDialog.close());
 
-document.getElementById("resetBtn").addEventListener("click", () => {
-  if (readOnly || !confirm("¿Empezar de cero? Se quitarán todas las selecciones y marcas de comprado.")) return;
+// Devuelve true si se ha reseteado.
+function resetList() {
+  if (readOnly || !confirm("¿Empezar de cero? Se quitarán todas las selecciones y marcas de comprado.")) return false;
   state.items.forEach((i) => { i.sel = false; i.bought = false; });
+  openCatId = null; // vuelven a verse todos los grupos
   save();
   render();
+  return true;
+}
+
+document.getElementById("resetBtn").addEventListener("click", resetList);
+document.getElementById("compraReset").addEventListener("click", () => {
+  if (resetList()) compraDialog.close();
 });
 
 // Datos: copia de seguridad
