@@ -140,6 +140,7 @@ button, select, input { font: inherit; }
   white-space: nowrap;
 }
 .item.sel { background: var(--primary); box-shadow: none; color: #fff; }
+.item.hit { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }
 .editing .item { box-shadow: inset 0 0 0 1.5px var(--accent); }
 
 /* Barra inferior */

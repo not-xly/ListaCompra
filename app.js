@@ -61,30 +61,46 @@ function save() {
 
 // Pantalla principal: grupos en acordeón
 
-let query = ""; // texto del buscador: vacío = lista por grupos
+let query = ""; // texto del buscador: vacío = lista por grupos normal
+
+// Sin distinguir mayúsculas ni acentos
+const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 function render() {
   groupsEl.replaceChildren();
-  if (query) renderSearch();
-  else renderGroups();
+  renderGroups();
   groupsEl.classList.toggle("editing", editing);
   document.getElementById("editBtn").classList.toggle("on", editing);
   document.getElementById("editHint").hidden = !editing;
   updateCounts();
 }
 
+// Con búsqueda: se ven todos los grupos, se abren los que tienen coincidencias
+// y los artículos encontrados se marcan. Sin búsqueda: un grupo abierto a la vez.
 function renderGroups() {
+  const q = normalize(query);
+  const hits = query ? new Set(state.items.filter((i) => normalize(i.name).includes(q)).map((i) => i.id)) : null;
+  if (hits && !hits.size) {
+    groupsEl.append(el("p", "search-empty", "Ningún artículo coincide con «" + query + "»."));
+    return;
+  }
   for (const cat of state.cats) {
-    if (openCatId && cat.id !== openCatId) continue; // con un grupo abierto, sólo se ve ese
+    if (!hits && openCatId && cat.id !== openCatId) continue; // con un grupo abierto, sólo se ve ese
     const items = itemsOf(cat.id);
-    const open = cat.id === openCatId;
+    const open = hits ? items.some((i) => hits.has(i.id)) : cat.id === openCatId;
     const section = el("section", "group" + (open ? " open" : ""));
     const head = el("button", "group-title");
     head.type = "button";
     head.dataset.cat = cat.id;
     head.append(el("span", "", cat.name), el("span", "group-count"));
     head.addEventListener("click", () => {
-      openCatId = open ? null : cat.id;
+      if (query) {
+        query = "";
+        document.getElementById("search").value = "";
+        openCatId = cat.id;
+      } else {
+        openCatId = open ? null : cat.id;
+      }
       render();
       // Al abrir, el grupo queda arriba; al cerrar, la lista vuelve a verse centrada en ese grupo.
       const target = openCatId ? groupsEl.querySelector(".group.open") : groupsEl.querySelector(`.group-title[data-cat="${cat.id}"]`);
@@ -94,35 +110,11 @@ function renderGroups() {
     if (open) {
       const grid = el("div", "items");
       grid.style.gridTemplateRows = "repeat(" + Math.ceil(items.length / 2) + ", auto)";
-      for (const item of items) grid.append(itemButton(item));
+      for (const item of items) grid.append(itemButton(item, hits ? hits.has(item.id) : false));
       section.append(grid);
     }
     groupsEl.append(section);
   }
-}
-
-// Buscador: se mantienen los grupos y sólo se ven los artículos que coinciden (sin distinguir mayúsculas ni acentos)
-const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-function renderSearch() {
-  const q = normalize(query);
-  let found = 0;
-  for (const cat of state.cats) {
-    const matches = itemsOf(cat.id).filter((i) => normalize(i.name).includes(q));
-    if (!matches.length) continue;
-    found += matches.length;
-    const section = el("section", "group");
-    const head = el("div", "group-title");
-    head.dataset.cat = cat.id;
-    head.append(el("span", "", cat.name), el("span", "group-count"));
-    section.append(head);
-    const grid = el("div", "items");
-    grid.style.gridTemplateRows = "repeat(" + Math.ceil(matches.length / 2) + ", auto)";
-    for (const item of matches) grid.append(itemButton(item));
-    section.append(grid);
-    groupsEl.append(section);
-  }
-  if (!found) groupsEl.append(el("p", "search-empty", "Ningún artículo coincide con «" + query + "»."));
 }
 
 function updateCounts() {
@@ -134,8 +126,8 @@ function updateCounts() {
   document.getElementById("viewBtn").textContent = "Editar seleccionados (" + n + ")";
 }
 
-function itemButton(item) {
-  const btn = el("button", "item" + (item.sel ? " sel" : ""));
+function itemButton(item, hit = false) {
+  const btn = el("button", "item" + (item.sel ? " sel" : "") + (hit ? " hit" : ""));
   btn.type = "button";
   btn.append(el("span", "name", item.name));
   btn.addEventListener("click", () => {
