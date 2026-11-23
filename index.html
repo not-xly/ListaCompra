@@ -14,14 +14,23 @@
 </head>
 <body>
   <header class="top">
-    <h1 id="title">Alimentación</h1>
+    <nav class="tabs">
+      <button type="button" data-tab="alimentacion" class="on">Alimentación</button>
+      <button type="button" data-tab="limpieza">Limpieza</button>
+      <button type="button" data-tab="compra" id="tabCompra">Compra (0)</button>
+    </nav>
+  </header>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Buscar artículo" autocomplete="off" autocapitalize="sentences" enterkeyhint="search">
+    <span id="compraHint" class="toolbar-hint" hidden>Toca un artículo para quitarlo</span>
     <div class="actions">
       <button id="editBtn" type="button" aria-label="Modo edición">Editar</button>
       <button id="addBtn" type="button" aria-label="Añadir artículo">+</button>
       <button id="clearBtn" type="button" hidden>Vaciar</button>
       <button id="datosBtn" type="button" aria-label="Exportar o importar">Datos</button>
     </div>
-  </header>
+  </div>
 
   <p id="editHint" class="edit-hint" hidden>Modo edición: toca un artículo para cambiarlo. Pulsa Editar para salir.</p>
 
@@ -31,16 +40,6 @@
     <span id="toastText"></span>
     <button id="undoBtn" type="button">Deshacer</button>
   </div>
-
-  <div id="searchBar" class="search">
-    <input id="search" type="search" placeholder="Buscar artículo" autocomplete="off" autocapitalize="sentences" enterkeyhint="search">
-  </div>
-
-  <nav class="tabs">
-    <button type="button" data-tab="alimentacion" class="on">Alimentación</button>
-    <button type="button" data-tab="limpieza">Limpieza</button>
-    <button type="button" data-tab="compra" id="tabCompra">Compra (0)</button>
-  </nav>
 
   <dialog id="datos">
     <h2>Datos</h2>

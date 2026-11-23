@@ -88,11 +88,11 @@ const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLo
 
 function render() {
   const compra = tab === "compra";
-  document.getElementById("title").textContent = compra ? "Compra" : state.cats.find((c) => c.id === tab).name;
   document.getElementById("editBtn").hidden = compra;
   document.getElementById("addBtn").hidden = compra;
   document.getElementById("clearBtn").hidden = !compra;
-  document.getElementById("searchBar").hidden = compra;
+  document.getElementById("search").hidden = compra;
+  document.getElementById("compraHint").hidden = !compra;
   if (compra) editing = false;
   groupsEl.replaceChildren();
   if (compra) renderCompra();
