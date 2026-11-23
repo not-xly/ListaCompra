@@ -29,7 +29,7 @@ function el(tag, className, text) {
 
 function seedState() {
   return {
-    v: 2,
+    v: 3,
     cats: SEED_CATEGORIES.map(([id, name]) => ({ id, name })),
     items: SEED_ITEMS.map(([cat, name]) => ({ id: uid(), name, cat, sel: false, bought: false })),
   };
@@ -37,17 +37,20 @@ function seedState() {
 
 // v1 tenía 13 grupos (y los que se hubieran creado a mano). Se juntan en dos:
 // limpieza, ropa e higiene por un lado; todo lo demás en alimentación y bebidas.
-// Se conservan los artículos, las selecciones y las marcas de comprado; los nombres
-// largos originales pasan a su versión corta (los renombrados a mano no se tocan).
+// Se conservan los artículos, las selecciones y las marcas de comprado.
+// v2 acortó los nombres; v3 devuelve el original a los que aún tienen el nombre corto
+// (los renombrados a mano no se tocan).
 const LIMPIEZA_V1 = new Set(["casa", "ropa", "higiene"]);
+const ORIGINAL_NAMES = Object.fromEntries(Object.entries(SHORT_NAMES_V2).map(([long, short]) => [short, long]));
 function migrate(data) {
-  if (data.v >= 2) return data;
-  for (const item of data.items) {
-    item.cat = LIMPIEZA_V1.has(item.cat) ? "limpieza" : "alimentacion";
-    if (Object.hasOwn(RENAMES_V2, item.name)) item.name = RENAMES_V2[item.name];
+  if (data.v >= 3) return data;
+  if (!(data.v >= 2)) {
+    for (const item of data.items) item.cat = LIMPIEZA_V1.has(item.cat) ? "limpieza" : "alimentacion";
+    data.cats = SEED_CATEGORIES.map(([id, name]) => ({ id, name }));
+  } else {
+    for (const item of data.items) if (Object.hasOwn(ORIGINAL_NAMES, item.name)) item.name = ORIGINAL_NAMES[item.name];
   }
-  data.cats = SEED_CATEGORIES.map(([id, name]) => ({ id, name }));
-  data.v = 2;
+  data.v = 3;
   return data;
 }
 
@@ -62,7 +65,7 @@ function loadState() {
     readOnly = true;
     alert("No se han podido leer los datos guardados (" + err.message + "). " +
       "No se modificará nada hasta que importes un archivo de copia.");
-    return { v: 2, cats: [], items: [] };
+    return { v: 3, cats: [], items: [] };
   }
 }
 
