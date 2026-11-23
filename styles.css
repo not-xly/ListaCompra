@@ -65,7 +65,7 @@ button, select, input { font: inherit; }
   line-height: 1.2;
 }
 
-/* Grupos en acordeón: sólo uno desplegado */
+/* Dos grupos, siempre desplegados */
 .groups {
   flex: 1;
   background: var(--bg);
@@ -75,6 +75,9 @@ button, select, input { font: inherit; }
 }
 
 .group-title {
+  position: sticky; /* la cabecera del grupo queda arriba mientras se recorre */
+  top: 0;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -85,14 +88,12 @@ button, select, input { font: inherit; }
   border-bottom: 1px solid var(--line);
   border-radius: 0;
   background: var(--card);
-  color: var(--text);
+  color: var(--primary);
   font-size: 15px;
   font-weight: 700;
   text-align: left;
 }
-.group.open .group-title { color: var(--primary); }
 .group-count { font-weight: 500; color: var(--muted); font-size: 13px; }
-.group.open .group-count::after { content: "  ▲"; }
 
 .edit-hint {
   margin: 0;
@@ -106,38 +107,58 @@ button, select, input { font: inherit; }
 
 .items {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-auto-flow: column;
-  gap: 4px 5px;
-  padding: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column; /* alfabético hacia abajo: primera columna, luego segunda y tercera */
+  gap: 4px;
+  padding: 5px;
   background: var(--bg);
 }
 
-/* Artículo: pulsación larga = seleccionar (verde); tocar uno verde = quitar */
+/* Artículo: un toque lo selecciona (verde); otro toque lo quita */
 .item {
   display: flex;
   align-items: center;
   gap: 4px;
   min-width: 0;
+  position: relative;
   min-height: 36px;
-  padding: 4px 8px;
+  padding: 3px 6px;
   border: 0;
   border-radius: 7px;
   background: var(--card);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.2;
   text-align: left;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+/* Una sola línea; si no cabe, al tocarlo se despliega encima, sin mover la cuadrícula */
 .item .name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.item.expanded { z-index: 2; }
+.item.expanded .name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  min-height: 100%;
+  padding: 3px 6px;
+  border-radius: 7px;
+  background: inherit;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .28);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none; /* un toque sobre la parte desplegada llega al artículo de debajo */
 }
 .item.sel { background: var(--primary); box-shadow: none; color: #fff; }
 .item.hit { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }

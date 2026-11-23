@@ -11,7 +11,6 @@ const ficha = document.getElementById("ficha");
 const form = document.getElementById("fichaForm");
 
 let state = null;     // { v, cats: [{id, name}], items: [{id, name, cat, sel, bought}] }
-let openCatId = null; // grupo desplegado (sólo uno a la vez)
 let editing = false;  // modo edición: tocar un artículo lo abre para editarlo
 let editingId = null; // artículo abierto en el diálogo (null = nuevo)
 let readOnly = false; // datos guardados ilegibles: no sobrescribir hasta importar
@@ -19,6 +18,7 @@ let readOnly = false; // datos guardados ilegibles: no sobrescribir hasta import
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const byName = (a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" });
 const itemsOf = (catId) => state.items.filter((i) => i.cat === catId).sort(byName);
+const COLS = 3; // columnas de cada grupo; el orden alfabético baja por la primera, luego la segunda…
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -29,10 +29,26 @@ function el(tag, className, text) {
 
 function seedState() {
   return {
-    v: 1,
+    v: 2,
     cats: SEED_CATEGORIES.map(([id, name]) => ({ id, name })),
     items: SEED_ITEMS.map(([cat, name]) => ({ id: uid(), name, cat, sel: false, bought: false })),
   };
+}
+
+// v1 tenía 13 grupos (y los que se hubieran creado a mano). Se juntan en dos:
+// limpieza, ropa e higiene por un lado; todo lo demás en alimentación y bebidas.
+// Se conservan los artículos, las selecciones y las marcas de comprado; los nombres
+// largos originales pasan a su versión corta (los renombrados a mano no se tocan).
+const LIMPIEZA_V1 = new Set(["casa", "ropa", "higiene"]);
+function migrate(data) {
+  if (data.v >= 2) return data;
+  for (const item of data.items) {
+    item.cat = LIMPIEZA_V1.has(item.cat) ? "limpieza" : "alimentacion";
+    if (Object.hasOwn(RENAMES_V2, item.name)) item.name = RENAMES_V2[item.name];
+  }
+  data.cats = SEED_CATEGORIES.map(([id, name]) => ({ id, name }));
+  data.v = 2;
+  return data;
 }
 
 function loadState() {
@@ -41,12 +57,12 @@ function loadState() {
   try {
     const data = JSON.parse(raw);
     if (!Array.isArray(data.cats) || !Array.isArray(data.items)) throw new Error("formato no reconocido");
-    return data;
+    return migrate(data);
   } catch (err) {
     readOnly = true;
     alert("No se han podido leer los datos guardados (" + err.message + "). " +
       "No se modificará nada hasta que importes un archivo de copia.");
-    return { v: 1, cats: [], items: [] };
+    return { v: 2, cats: [], items: [] };
   }
 }
 
@@ -59,7 +75,7 @@ function save() {
   }
 }
 
-// Pantalla principal: grupos en acordeón
+// Pantalla principal: los dos grupos, siempre desplegados
 
 let query = ""; // texto del buscador: vacío = lista por grupos normal
 
@@ -75,8 +91,8 @@ function render() {
   updateCounts();
 }
 
-// Con búsqueda: se ven todos los grupos, se abren los que tienen coincidencias
-// y los artículos encontrados se marcan. Sin búsqueda: un grupo abierto a la vez.
+// Con búsqueda se ve todo igual, pero los artículos encontrados se marcan
+// y la lista se desplaza hasta el primero.
 function renderGroups() {
   const q = normalize(query);
   const hits = query ? new Set(state.items.filter((i) => normalize(i.name).includes(q)).map((i) => i.id)) : null;
@@ -85,36 +101,18 @@ function renderGroups() {
     return;
   }
   for (const cat of state.cats) {
-    if (!hits && openCatId && cat.id !== openCatId) continue; // con un grupo abierto, sólo se ve ese
     const items = itemsOf(cat.id);
-    const open = hits ? items.some((i) => hits.has(i.id)) : cat.id === openCatId;
-    const section = el("section", "group" + (open ? " open" : ""));
-    const head = el("button", "group-title");
-    head.type = "button";
+    const section = el("section", "group");
+    const head = el("h2", "group-title");
     head.dataset.cat = cat.id;
     head.append(el("span", "", cat.name), el("span", "group-count"));
-    head.addEventListener("click", () => {
-      if (query) {
-        query = "";
-        document.getElementById("search").value = "";
-        openCatId = cat.id;
-      } else {
-        openCatId = open ? null : cat.id;
-      }
-      render();
-      // Al abrir, el grupo queda arriba; al cerrar, la lista vuelve a verse centrada en ese grupo.
-      const target = openCatId ? groupsEl.querySelector(".group.open") : groupsEl.querySelector(`.group-title[data-cat="${cat.id}"]`);
-      target.scrollIntoView({ block: "start" });
-    });
-    section.append(head);
-    if (open) {
-      const grid = el("div", "items");
-      grid.style.gridTemplateRows = "repeat(" + Math.ceil(items.length / 2) + ", auto)";
-      for (const item of items) grid.append(itemButton(item, hits ? hits.has(item.id) : false));
-      section.append(grid);
-    }
+    const grid = el("div", "items");
+    grid.style.gridTemplateRows = "repeat(" + Math.ceil(items.length / COLS) + ", auto)";
+    for (const item of items) grid.append(itemButton(item, hits ? hits.has(item.id) : false));
+    section.append(head, grid);
     groupsEl.append(section);
   }
+  if (hits) groupsEl.querySelector(".item.hit").scrollIntoView({ block: "center" });
 }
 
 function updateCounts() {
@@ -133,9 +131,23 @@ function itemButton(item, hit = false) {
   btn.addEventListener("click", () => {
     if (editing) return openFicha(item);
     setSelected(item, !item.sel, btn); // un toque selecciona o quita
+    expand(btn);
   });
   return btn;
 }
+
+// El último artículo tocado muestra el nombre entero si no le cabía.
+function expand(btn) {
+  const was = btn.classList.contains("expanded");
+  collapse();
+  const name = btn.querySelector(".name");
+  if (!was && name.scrollWidth > name.clientWidth + 1) btn.classList.add("expanded");
+}
+
+function collapse() {
+  for (const b of groupsEl.querySelectorAll(".item.expanded")) b.classList.remove("expanded");
+}
+groupsEl.addEventListener("scroll", collapse, { passive: true });
 
 function setSelected(item, value, btn) {
   item.sel = value;
@@ -149,25 +161,16 @@ function setSelected(item, value, btn) {
 
 function fillCategorySelect(selected) {
   const select = document.getElementById("fCat");
-  const options = state.cats.map((c) => new Option(c.name, c.id));
-  options.push(new Option("+ Nuevo grupo…", "__new__"));
-  select.replaceChildren(...options);
+  select.replaceChildren(...state.cats.map((c) => new Option(c.name, c.id)));
   select.value = selected;
-  toggleNewCat();
 }
 
-function toggleNewCat() {
-  const isNew = document.getElementById("fCat").value === "__new__";
-  document.getElementById("newCatField").hidden = !isNew;
-}
-
-function openFicha(item, catId = openCatId) {
+function openFicha(item) {
   editingId = item ? item.id : null;
   document.getElementById("fichaTitle").textContent = item ? "Editar artículo" : "Nuevo artículo";
   document.getElementById("fName").value = item ? item.name : "";
-  document.getElementById("fNewCat").value = "";
   document.getElementById("fDelete").hidden = !item;
-  fillCategorySelect(item ? item.cat : (catId ?? state.cats[0].id));
+  fillCategorySelect(item ? item.cat : state.cats[0].id);
   ficha.showModal();
 }
 
@@ -176,18 +179,7 @@ form.addEventListener("submit", (event) => {
   const name = document.getElementById("fName").value.trim();
   if (!name) return;
 
-  let cat = document.getElementById("fCat").value;
-  if (cat === "__new__") {
-    const newName = document.getElementById("fNewCat").value.trim();
-    if (!newName) return document.getElementById("fNewCat").focus();
-    const same = state.cats.find((c) => c.name.toLowerCase() === newName.toLowerCase());
-    if (same) {
-      cat = same.id;
-    } else {
-      cat = uid();
-      state.cats.push({ id: cat, name: newName });
-    }
-  }
+  const cat = document.getElementById("fCat").value;
 
   if (editingId) {
     Object.assign(state.items.find((i) => i.id === editingId), { name, cat });
@@ -197,11 +189,6 @@ form.addEventListener("submit", (event) => {
   save();
   ficha.close();
   render();
-});
-
-document.getElementById("fCat").addEventListener("change", () => {
-  toggleNewCat();
-  if (!document.getElementById("newCatField").hidden) document.getElementById("fNewCat").focus();
 });
 
 document.getElementById("fCancel").addEventListener("click", () => ficha.close());
@@ -288,7 +275,6 @@ document.getElementById("compraClose").addEventListener("click", () => compraDia
 function resetList() {
   if (readOnly || !confirm("¿Empezar de cero? Se quitarán todas las selecciones y marcas de comprado.")) return false;
   state.items.forEach((i) => { i.sel = false; i.bought = false; });
-  openCatId = null; // vuelven a verse todos los grupos
   save();
   render();
   return true;
@@ -330,7 +316,7 @@ document.getElementById("importFile").addEventListener("change", (event) => {
       return alert("El archivo no es una copia de esta lista.");
     }
     if (!confirm("Esto sustituirá la lista actual. ¿Continuar?")) return;
-    state = data;
+    state = migrate(data); // una copia antigua llega con los 13 grupos
     readOnly = false;
     save();
     datosDialog.close();
@@ -345,5 +331,5 @@ if ("serviceWorker" in navigator) {
 
 // Arranque: al final, con todas las constantes ya declaradas.
 state = loadState();
-if (!readOnly && localStorage.getItem(KEY) === null) save();
+if (!readOnly) save(); // guarda la lista inicial o la ya migrada a dos grupos
 render();
