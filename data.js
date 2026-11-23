@@ -1,8 +1,8 @@
-// Dos grupos; dentro de cada uno, los artículos se ven en orden alfabético.
+// Dos grupos (cada uno en su pantalla); dentro de cada uno, los artículos se ven en orden alfabético.
 // Cada artículo: [id de grupo, nombre]. Se usa sólo la primera vez; después manda lo guardado.
 const SEED_CATEGORIES = [
-  ["alimentacion", "Alimentación y bebidas"],
-  ["limpieza", "Limpieza, ropa e higiene"],
+  ["alimentacion", "Alimentación"],
+  ["limpieza", "Limpieza"],
 ];
 
 const SEED_ITEMS = [

@@ -14,10 +14,11 @@
 </head>
 <body>
   <header class="top">
-    <h1>Compra</h1>
+    <h1 id="title">Alimentación</h1>
     <div class="actions">
       <button id="editBtn" type="button" aria-label="Modo edición">Editar</button>
       <button id="addBtn" type="button" aria-label="Añadir artículo">+</button>
+      <button id="clearBtn" type="button" hidden>Vaciar</button>
       <button id="datosBtn" type="button" aria-label="Exportar o importar">Datos</button>
     </div>
   </header>
@@ -26,28 +27,20 @@
 
   <main id="groups" class="groups"></main>
 
-  <div class="search">
+  <div id="toast" class="toast" hidden>
+    <span id="toastText"></span>
+    <button id="undoBtn" type="button">Deshacer</button>
+  </div>
+
+  <div id="searchBar" class="search">
     <input id="search" type="search" placeholder="Buscar artículo" autocomplete="off" autocapitalize="sentences" enterkeyhint="search">
   </div>
 
-  <footer class="bottombar">
-    <button id="viewBtn" type="button" class="primary">Editar seleccionados (0)</button>
-    <button id="resetBtn" type="button">Resetear</button>
-  </footer>
-
-  <dialog id="compra" class="full">
-    <header class="top">
-      <h1>Compra <span id="compraCount" class="count"></span></h1>
-      <div class="actions">
-        <button id="compraClose" type="button">Volver</button>
-      </div>
-    </header>
-    <div id="compraList" class="compra-list"></div>
-    <p class="hint">Toca un artículo para marcarlo como comprado. La × lo quita de la lista.</p>
-    <footer class="bottombar">
-      <button id="compraReset" type="button">Resetear</button>
-    </footer>
-  </dialog>
+  <nav class="tabs">
+    <button type="button" data-tab="alimentacion" class="on">Alimentación</button>
+    <button type="button" data-tab="limpieza">Limpieza</button>
+    <button type="button" data-tab="compra" id="tabCompra">Compra (0)</button>
+  </nav>
 
   <dialog id="datos">
     <h2>Datos</h2>

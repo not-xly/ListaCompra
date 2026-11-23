@@ -4,13 +4,12 @@
 const KEY = "lista-compra-v1";
 
 const groupsEl = document.getElementById("groups");
-const compraDialog = document.getElementById("compra");
-const compraList = document.getElementById("compraList");
 const datosDialog = document.getElementById("datos");
 const ficha = document.getElementById("ficha");
 const form = document.getElementById("fichaForm");
 
-let state = null;     // { v, cats: [{id, name}], items: [{id, name, cat, sel, bought}] }
+let state = null;     // { v, cats: [{id, name}], items: [{id, name, cat, sel}] }
+let tab = "alimentacion"; // pantalla visible: id de un grupo o "compra"
 let editing = false;  // modo edición: tocar un artículo lo abre para editarlo
 let editingId = null; // artículo abierto en el diálogo (null = nuevo)
 let readOnly = false; // datos guardados ilegibles: no sobrescribir hasta importar
@@ -29,9 +28,9 @@ function el(tag, className, text) {
 
 function seedState() {
   return {
-    v: 3,
+    v: 4,
     cats: SEED_CATEGORIES.map(([id, name]) => ({ id, name })),
-    items: SEED_ITEMS.map(([cat, name]) => ({ id: uid(), name, cat, sel: false, bought: false })),
+    items: SEED_ITEMS.map(([cat, name]) => ({ id: uid(), name, cat, sel: false })),
   };
 }
 
@@ -39,18 +38,20 @@ function seedState() {
 // limpieza, ropa e higiene por un lado; todo lo demás en alimentación y bebidas.
 // Se conservan los artículos, las selecciones y las marcas de comprado.
 // v2 acortó los nombres; v3 devuelve el original a los que aún tienen el nombre corto
-// (los renombrados a mano no se tocan).
+// (los renombrados a mano no se tocan). v4: tres pantallas; los grupos se llaman
+// sólo «Alimentación» y «Limpieza» y desaparece la marca de comprado.
 const LIMPIEZA_V1 = new Set(["casa", "ropa", "higiene"]);
 const ORIGINAL_NAMES = Object.fromEntries(Object.entries(SHORT_NAMES_V2).map(([long, short]) => [short, long]));
 function migrate(data) {
-  if (data.v >= 3) return data;
+  if (data.v >= 4) return data;
   if (!(data.v >= 2)) {
     for (const item of data.items) item.cat = LIMPIEZA_V1.has(item.cat) ? "limpieza" : "alimentacion";
-    data.cats = SEED_CATEGORIES.map(([id, name]) => ({ id, name }));
-  } else {
+  } else if (data.v === 2) {
     for (const item of data.items) if (Object.hasOwn(ORIGINAL_NAMES, item.name)) item.name = ORIGINAL_NAMES[item.name];
   }
-  data.v = 3;
+  data.cats = SEED_CATEGORIES.map(([id, name]) => ({ id, name }));
+  for (const item of data.items) delete item.bought;
+  data.v = 4;
   return data;
 }
 
@@ -65,7 +66,7 @@ function loadState() {
     readOnly = true;
     alert("No se han podido leer los datos guardados (" + err.message + "). " +
       "No se modificará nada hasta que importes un archivo de copia.");
-    return { v: 3, cats: [], items: [] };
+    return { v: 4, cats: [], items: [] };
   }
 }
 
@@ -78,53 +79,56 @@ function save() {
   }
 }
 
-// Pantalla principal: los dos grupos, siempre desplegados
+// Tres pantallas: Alimentación y Limpieza para elegir; Compra con lo elegido
 
-let query = ""; // texto del buscador: vacío = lista por grupos normal
+let query = ""; // texto del buscador (sólo en Alimentación y Limpieza)
 
 // Sin distinguir mayúsculas ni acentos
 const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 function render() {
+  const compra = tab === "compra";
+  document.getElementById("title").textContent = compra ? "Compra" : state.cats.find((c) => c.id === tab).name;
+  document.getElementById("editBtn").hidden = compra;
+  document.getElementById("addBtn").hidden = compra;
+  document.getElementById("clearBtn").hidden = !compra;
+  document.getElementById("searchBar").hidden = compra;
+  if (compra) editing = false;
   groupsEl.replaceChildren();
-  renderGroups();
+  if (compra) renderCompra();
+  else renderCat(tab);
   groupsEl.classList.toggle("editing", editing);
   document.getElementById("editBtn").classList.toggle("on", editing);
   document.getElementById("editHint").hidden = !editing;
+  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("on", b.dataset.tab === tab);
   updateCounts();
+}
+
+// Cuadrícula en orden alfabético por columnas: baja por la primera, luego la segunda…
+function grid(items, cols, make) {
+  const node = el("div", "items cols" + cols);
+  node.style.gridTemplateRows = "repeat(" + Math.ceil(items.length / cols) + ", auto)";
+  for (const item of items) node.append(make(item));
+  return node;
 }
 
 // Con búsqueda se ve todo igual, pero los artículos encontrados se marcan
 // y la lista se desplaza hasta el primero.
-function renderGroups() {
+function renderCat(catId) {
+  const items = itemsOf(catId);
   const q = normalize(query);
-  const hits = query ? new Set(state.items.filter((i) => normalize(i.name).includes(q)).map((i) => i.id)) : null;
+  const hits = query ? new Set(items.filter((i) => normalize(i.name).includes(q)).map((i) => i.id)) : null;
   if (hits && !hits.size) {
-    groupsEl.append(el("p", "search-empty", "Ningún artículo coincide con «" + query + "»."));
+    groupsEl.append(el("p", "search-empty", "Ningún artículo de esta pantalla coincide con «" + query + "»."));
     return;
   }
-  for (const cat of state.cats) {
-    const items = itemsOf(cat.id);
-    const section = el("section", "group");
-    const head = el("h2", "group-title");
-    head.dataset.cat = cat.id;
-    head.append(el("span", "", cat.name), el("span", "group-count"));
-    const grid = el("div", "items");
-    grid.style.gridTemplateRows = "repeat(" + Math.ceil(items.length / COLS) + ", auto)";
-    for (const item of items) grid.append(itemButton(item, hits ? hits.has(item.id) : false));
-    section.append(head, grid);
-    groupsEl.append(section);
-  }
+  groupsEl.append(grid(items, COLS, (item) => itemButton(item, hits ? hits.has(item.id) : false)));
   if (hits) groupsEl.querySelector(".item.hit").scrollIntoView({ block: "center" });
 }
 
 function updateCounts() {
-  for (const head of groupsEl.querySelectorAll(".group-title")) {
-    const items = itemsOf(head.dataset.cat);
-    head.querySelector(".group-count").textContent = items.filter((i) => i.sel).length + "/" + items.length;
-  }
   const n = state.items.filter((i) => i.sel).length;
-  document.getElementById("viewBtn").textContent = "Editar seleccionados (" + n + ")";
+  document.getElementById("tabCompra").textContent = "Compra (" + n + ")";
 }
 
 function itemButton(item, hit = false) {
@@ -133,7 +137,10 @@ function itemButton(item, hit = false) {
   btn.append(el("span", "name", item.name));
   btn.addEventListener("click", () => {
     if (editing) return openFicha(item);
-    setSelected(item, !item.sel, btn); // un toque selecciona o quita
+    item.sel = !item.sel; // un toque selecciona o quita
+    btn.classList.toggle("sel", item.sel);
+    save();
+    updateCounts();
     expand(btn);
   });
   return btn;
@@ -152,13 +159,53 @@ function collapse() {
 }
 groupsEl.addEventListener("scroll", collapse, { passive: true });
 
-function setSelected(item, value, btn) {
-  item.sel = value;
-  if (!value) item.bought = false;
-  btn.classList.toggle("sel", value);
-  save();
-  updateCounts();
+// Compra: sólo lo elegido, separado por grupo. Tocar un artículo lo quita de la lista.
+function renderCompra() {
+  const selected = state.items.filter((i) => i.sel);
+  if (!selected.length) {
+    groupsEl.append(el("p", "search-empty", "La lista está vacía. Elige artículos en Alimentación o Limpieza."));
+    return;
+  }
+  for (const cat of state.cats) {
+    const items = selected.filter((i) => i.cat === cat.id).sort(byName);
+    if (!items.length) continue;
+    groupsEl.append(el("h2", "group-title", cat.name), grid(items, 2, compraButton));
+  }
 }
+
+function compraButton(item) {
+  const btn = el("button", "item");
+  btn.type = "button";
+  btn.append(el("span", "name", item.name));
+  btn.addEventListener("click", () => {
+    item.sel = false;
+    save();
+    render();
+    showUndo([item], "«" + item.name + "» quitado");
+  });
+  return btn;
+}
+
+// Aviso con «Deshacer» por si se toca algo sin querer.
+let undoItems = [];
+let undoTimer = null;
+function showUndo(items, text) {
+  undoItems = items;
+  document.getElementById("toastText").textContent = text;
+  document.getElementById("toast").hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, 5000);
+}
+function hideUndo() {
+  document.getElementById("toast").hidden = true;
+  undoItems = [];
+}
+document.getElementById("undoBtn").addEventListener("click", () => {
+  undoItems.forEach((i) => { i.sel = true; });
+  save();
+  hideUndo();
+  render();
+});
 
 // Diálogo de artículo
 
@@ -173,7 +220,7 @@ function openFicha(item) {
   document.getElementById("fichaTitle").textContent = item ? "Editar artículo" : "Nuevo artículo";
   document.getElementById("fName").value = item ? item.name : "";
   document.getElementById("fDelete").hidden = !item;
-  fillCategorySelect(item ? item.cat : state.cats[0].id);
+  fillCategorySelect(item ? item.cat : tab);
   ficha.showModal();
 }
 
@@ -187,7 +234,7 @@ form.addEventListener("submit", (event) => {
   if (editingId) {
     Object.assign(state.items.find((i) => i.id === editingId), { name, cat });
   } else {
-    state.items.push({ id: uid(), name, cat, sel: false, bought: false });
+    state.items.push({ id: uid(), name, cat, sel: false });
   }
   save();
   ficha.close();
@@ -225,67 +272,27 @@ document.getElementById("editBtn").addEventListener("click", () => {
 document.getElementById("datosBtn").addEventListener("click", () => datosDialog.showModal());
 document.getElementById("datosClose").addEventListener("click", () => datosDialog.close());
 
-// Pantalla de la compra
+// Pestañas
 
-function openCompra() {
-  renderCompra();
-  compraDialog.showModal();
-}
-
-function renderCompra() {
-  compraList.replaceChildren();
-  const selected = state.items.filter((i) => i.sel).sort(byName);
-  if (!selected.length) {
-    compraList.append(el("p", "empty", "Todavía no hay artículos seleccionados. Toca un artículo dentro de su grupo para seleccionarlo."));
-  }
-  compraList.style.gridTemplateRows = selected.length ? "repeat(" + Math.ceil(selected.length / 2) + ", auto)" : "";
-  for (const item of selected) compraList.append(compraRow(item));
-  const pending = selected.filter((i) => !i.bought).length;
-  document.getElementById("compraCount").textContent = selected.length ? pending + " por comprar" : "";
-}
-
-function compraRow(item) {
-  const row = el("div", "compra-row" + (item.bought ? " bought" : ""));
-
-  const main = el("button", "compra-main");
-  main.type = "button";
-  main.append(el("span", "box"), el("span", "name", item.name));
-  main.addEventListener("click", () => {
-    item.bought = !item.bought;
-    save();
-    renderCompra();
-  });
-
-  const quit = el("button", "compra-quit", "×");
-  quit.type = "button";
-  quit.setAttribute("aria-label", "Quitar de la compra");
-  quit.addEventListener("click", () => {
-    item.sel = false;
-    item.bought = false;
-    save();
-    renderCompra();
+for (const b of document.querySelectorAll(".tabs button")) {
+  b.addEventListener("click", () => {
+    if (b.dataset.tab === tab) return;
+    tab = b.dataset.tab;
+    query = "";
+    document.getElementById("search").value = "";
+    hideUndo();
     render();
+    groupsEl.scrollTop = 0;
   });
-
-  row.append(main, quit);
-  return row;
 }
 
-document.getElementById("viewBtn").addEventListener("click", openCompra);
-document.getElementById("compraClose").addEventListener("click", () => compraDialog.close());
-
-// Devuelve true si se ha reseteado.
-function resetList() {
-  if (readOnly || !confirm("¿Empezar de cero? Se quitarán todas las selecciones y marcas de comprado.")) return false;
-  state.items.forEach((i) => { i.sel = false; i.bought = false; });
+document.getElementById("clearBtn").addEventListener("click", () => {
+  const selected = state.items.filter((i) => i.sel);
+  if (readOnly || !selected.length || !confirm("¿Vaciar la lista de la compra?")) return;
+  selected.forEach((i) => { i.sel = false; });
   save();
   render();
-  return true;
-}
-
-document.getElementById("resetBtn").addEventListener("click", resetList);
-document.getElementById("compraReset").addEventListener("click", () => {
-  if (resetList()) compraDialog.close();
+  showUndo(selected, "Lista vaciada");
 });
 
 // Datos: copia de seguridad
